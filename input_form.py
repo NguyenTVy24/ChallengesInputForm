@@ -1,4 +1,6 @@
 """Run input form in RPA Challenge"""
+import os
+import time
 
 import openpyxl
 from selenium import webdriver
@@ -9,10 +11,13 @@ XPATH_DOWNLOAD = "//a[contains(text(), 'Download Excel')]"
 XPATH_START_BUTON = "//button[contains(text(), 'Start')]"
 
 """Class InputForm"""
+
+
 class InputForm:
     """
         This class handles all the input forms
     """
+
     def __init__(self, download_dir: str, url: str):
         self.data = {}
         self.url = url
@@ -34,7 +39,7 @@ class InputForm:
         """
         Setting options for chrome driver
 
-        :param download_dir: input path download
+        :param download_dir: Path to the download folder.
         :return: None
         """
         chrome_options = Options()
@@ -49,6 +54,7 @@ class InputForm:
     def set_link_web(self):
         """
         Setting link for web browser
+
         :return: None
         """
         self.driver.get(self.url)
@@ -56,17 +62,18 @@ class InputForm:
     def download_data(self):
         """
         Download data from web browser
+
         :return: None
         """
         download_button = self.driver.find_element(By.XPATH, XPATH_DOWNLOAD)
         download_button.click()
 
-    def get_data_from_file(self):
+    def get_data_from_file(self, name_file: str):
         """
         Get data from file
+        :param name_file: Name of the file to be downloaded.
         :return: None
         """
-        name_file = 'challenge.xlsx'
         wb = openpyxl.load_workbook(name_file)
         list_sheet_names = wb.sheetnames
         sheet = wb[list_sheet_names[0]]
@@ -85,6 +92,7 @@ class InputForm:
     def start_the_process(self):
         """
         Start the process
+
         :return: None
         """
         start_button = self.driver.find_element(By.XPATH, XPATH_START_BUTON)
@@ -93,6 +101,7 @@ class InputForm:
     def run_the_process(self):
         """
         Run the process
+
         :return: None
         """
         for user in self.data:
@@ -110,18 +119,49 @@ class InputForm:
                 input_item.send_keys(user[label_text])
             submit_button.click()
 
-    def run_input_form(self):
+    def run_input_form(self, download_dir: str, name_file: str):
         """
         Full follow input form
+        :param download_dir: Path to the download folder.
+        :param name_file: Name of the file to be downloaded.
         :return: None
         """
         self.set_link_web()
         self.download_data()
-        self.get_data_from_file()
+        self.wait_for_file_download(
+            download_dir=download_dir,
+            filename=name_file
+        )
+        self.get_data_from_file(name_file=name_file)
         self.start_the_process()
         self.run_the_process()
 
+    @staticmethod
+    def wait_for_file_download(download_dir: str, filename: str,
+                               timeout: int = 30, poll_interval: float = 0.5):
+        """
+        Waits until the file appears in the download directory or until timeout.
+
+        :param download_dir: Path to the download folder.
+        :param filename: Expected name of the file to be downloaded.
+        :param timeout: Maximum time (in seconds) to wait for the download.
+        :param poll_interval: Time interval (in seconds) between checks.
+        :return: Full path to the file if downloaded successfully, or None if timed out.
+        """
+        file_path = os.path.join(download_dir, filename)
+        start_time = time.time()
+
+        while time.time() - start_time < timeout:
+            if os.path.exists(file_path) and not file_path.endswith(".crdownload"):
+                return file_path
+            time.sleep(poll_interval)
+
+        return None
+
 
 if __name__ == '__main__':
-    input_form = InputForm(download_dir='./', url='https://www.rpachallenge.com/')
-    input_form.run_input_form()
+    NAME_FILE_DOWNLOAD = 'challenge.xlsx'
+
+    this_path_dir = os.path.dirname(os.path.abspath(__file__))
+    input_form = InputForm(download_dir=this_path_dir, url='https://www.rpachallenge.com/')
+    input_form.run_input_form(download_dir=this_path_dir, name_file=NAME_FILE_DOWNLOAD)
