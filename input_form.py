@@ -128,10 +128,13 @@ class InputForm:
         """
         self.set_link_web()
         self.download_data()
-        self.wait_for_file_download(
-            download_dir=download_dir,
-            filename=name_file
-        )
+
+        if not self.wait_for_file_download(
+                download_dir=download_dir,
+                filename=name_file
+            ):
+            raise FileNotFoundError()
+
         self.get_data_from_file(name_file=name_file)
         self.start_the_process()
         self.run_the_process()
